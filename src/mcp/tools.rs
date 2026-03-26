@@ -56,11 +56,11 @@ use super::format::{
     format_ticket_list_as_markdown,
 };
 use super::requests::{
-    AddDependencyRequest, AddNoteRequest, AddTicketToPlanRequest, CreateTicketRequest,
-    DocListRequest, DocSearchRequest, DocSetRequest, DocShowRequest, GetChildrenRequest,
-    GetNextAvailableTicketRequest, GetPlanStatusRequest, ListTicketsRequest,
-    RemoveDependencyRequest, SemanticSearchRequest, ShowPlanDetailsRequest, ShowTicketRequest,
-    SpawnSubtaskRequest, UpdateStatusRequest,
+    AddDependencyRequest, AddLabelRequest, AddNoteRequest, AddTicketToPlanRequest,
+    CreateTicketRequest, DocListRequest, DocSearchRequest, DocSetRequest, DocShowRequest,
+    GetChildrenRequest, GetNextAvailableTicketRequest, GetPlanStatusRequest, ListTicketsRequest,
+    RemoveDependencyRequest, RemoveLabelRequest, SemanticSearchRequest, ShowPlanDetailsRequest,
+    ShowTicketRequest, SpawnSubtaskRequest, UpdateStatusRequest,
 };
 
 /// Helper to create ToolAnnotations with all fields set
@@ -412,6 +412,26 @@ impl JanusTools {
             tool_annotations(true, false, true, false)
         );
 
+        register_tool!(
+            router,
+            "add_label",
+            "Add a label to a ticket. Labels must contain only lowercase letters, digits, and underscores.",
+            AddLabelRequest,
+            add_label_impl,
+            false,
+            tool_annotations(false, false, true, false)
+        );
+
+        register_tool!(
+            router,
+            "remove_label",
+            "Remove a label from a ticket.",
+            RemoveLabelRequest,
+            remove_label_impl,
+            false,
+            tool_annotations(false, false, true, false)
+        );
+
         Self {
             tool_router: router,
         }
@@ -462,6 +482,11 @@ impl JanusTools {
             None
         };
         builder = builder.size(size);
+
+        // Set labels if provided
+        if let Some(ref labels) = request.labels {
+            builder = builder.labels(labels.clone());
+        }
 
         let (id, _file_path) = builder.build().map_err(|e| e.to_string())?;
 
@@ -723,6 +748,19 @@ impl JanusTools {
             query_builder = query_builder.with_filter(Box::new(BlockedFilter));
         }
 
+        // Add label filter
+        if let Some(ref labels_str) = request.labels {
+            let labels: Vec<String> = labels_str
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if !labels.is_empty() {
+                query_builder =
+                    query_builder.with_filter(Box::new(crate::query::LabelFilter::new(labels)));
+            }
+        }
+
         // Execute the query
         let mut filtered_tickets = query_builder
             .execute(tickets)
@@ -751,6 +789,7 @@ impl JanusTools {
             request.spawned_from.as_deref(),
             request.depth,
             request.size.as_deref(),
+            request.labels.as_deref(),
         );
 
         // Format as markdown
@@ -900,6 +939,70 @@ impl JanusTools {
             "Removed dependency: **{}** no longer depends on **{}**",
             ticket.id, request.depends_on_id
         ))
+    }
+
+    /// Add a label to a ticket.
+    async fn add_label_impl(
+        &self,
+        Parameters(request): Parameters<AddLabelRequest>,
+    ) -> Result<String, String> {
+        request.validate()?;
+
+        let ticket = Ticket::find(&request.id)
+            .await
+            .map_err(|e| format!("Ticket not found: {e}"))?;
+
+        let added = ticket
+            .add_label_with_actor(&request.label, Some(Actor::Mcp))
+            .map_err(|e| e.to_string())?;
+
+        // Refresh the in-memory store
+        if let Ok(store) = get_or_init_store().await {
+            store.refresh_ticket_in_store(&ticket.id).await;
+        }
+
+        if added {
+            Ok(format!(
+                "Added label '{}' to **{}**",
+                request.label, ticket.id
+            ))
+        } else {
+            Ok(format!(
+                "Label '{}' already exists on **{}**",
+                request.label, ticket.id
+            ))
+        }
+    }
+
+    /// Remove a label from a ticket.
+    async fn remove_label_impl(
+        &self,
+        Parameters(request): Parameters<RemoveLabelRequest>,
+    ) -> Result<String, String> {
+        let ticket = Ticket::find(&request.id)
+            .await
+            .map_err(|e| format!("Ticket not found: {e}"))?;
+
+        let removed = ticket
+            .remove_label_with_actor(&request.label, Some(Actor::Mcp))
+            .map_err(|e| e.to_string())?;
+
+        // Refresh the in-memory store
+        if let Ok(store) = get_or_init_store().await {
+            store.refresh_ticket_in_store(&ticket.id).await;
+        }
+
+        if removed {
+            Ok(format!(
+                "Removed label '{}' from **{}**",
+                request.label, ticket.id
+            ))
+        } else {
+            Err(format!(
+                "Label '{}' not found on ticket **{}**",
+                request.label, ticket.id
+            ))
+        }
     }
 
     /// Add a ticket to a plan.
@@ -1594,19 +1697,20 @@ mod tests {
 
     #[test]
     fn test_build_filter_summary_empty() {
-        let summary = build_filter_summary(None, None, None, None, None, None, None);
+        let summary = build_filter_summary(None, None, None, None, None, None, None, None);
         assert!(summary.is_empty());
     }
 
     #[test]
     fn test_build_filter_summary_ready() {
-        let summary = build_filter_summary(Some(true), None, None, None, None, None, None);
+        let summary = build_filter_summary(Some(true), None, None, None, None, None, None, None);
         assert_eq!(summary, "**Showing:** ready tickets\n\n");
     }
 
     #[test]
     fn test_build_filter_summary_multiple() {
-        let summary = build_filter_summary(None, None, Some("new"), Some("bug"), None, None, None);
+        let summary =
+            build_filter_summary(None, None, Some("new"), Some("bug"), None, None, None, None);
         assert_eq!(summary, "**Showing:** status=new, type=bug\n\n");
     }
 
@@ -2058,7 +2162,7 @@ mod tests {
     #[test]
     fn test_build_filter_summary_includes_size() {
         let summary =
-            build_filter_summary(None, None, None, None, None, None, Some("medium,large"));
+            build_filter_summary(None, None, None, None, None, None, Some("medium,large"), None);
         assert_eq!(summary, "**Showing:** size=medium,large\n\n");
     }
 
@@ -2183,6 +2287,8 @@ mod annotation_tests {
             "add_note",
             "add_dependency",
             "remove_dependency",
+            "add_label",
+            "remove_label",
             "add_ticket_to_plan",
             "doc_set",
         ];

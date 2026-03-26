@@ -21,6 +21,8 @@ pub enum EventType {
     DependencyRemoved,
     LinkAdded,
     LinkRemoved,
+    LabelAdded,
+    LabelRemoved,
 
     // Plan events
     PlanCreated,
@@ -40,7 +42,7 @@ pub enum EventType {
 enum_display_fromstr!(
     EventType,
     crate::error::JanusError::invalid_event_type,
-    ["ticket_created", "status_changed", "note_added", "field_updated", "dependency_added", "dependency_removed", "link_added", "link_removed", "plan_created", "ticket_added_to_plan", "ticket_removed_from_plan", "phase_added", "phase_removed", "ticket_moved", "doc_created", "cache_rebuilt"],
+    ["ticket_created", "status_changed", "note_added", "field_updated", "dependency_added", "dependency_removed", "link_added", "link_removed", "label_added", "label_removed", "plan_created", "ticket_added_to_plan", "ticket_removed_from_plan", "phase_added", "phase_removed", "ticket_moved", "doc_created", "cache_rebuilt"],
     {
         TicketCreated => "ticket_created",
         StatusChanged => "status_changed",
@@ -50,6 +52,8 @@ enum_display_fromstr!(
         DependencyRemoved => "dependency_removed",
         LinkAdded => "link_added",
         LinkRemoved => "link_removed",
+        LabelAdded => "label_added",
+        LabelRemoved => "label_removed",
         PlanCreated => "plan_created",
         TicketAddedToPlan => "ticket_added_to_plan",
         TicketRemovedFromPlan => "ticket_removed_from_plan",

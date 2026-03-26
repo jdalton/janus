@@ -408,6 +408,7 @@ mod tests {
             spawn_context: None,
             depth: None,
             triaged: None,
+            labels: Vec::new(),
             file_path: None,
             completion_summary: None,
             body: None,

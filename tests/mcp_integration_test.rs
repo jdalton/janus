@@ -143,8 +143,8 @@ fn test_mcp_tools_list() {
     assert!(response["result"]["tools"].is_array());
     let tools = response["result"]["tools"].as_array().unwrap();
 
-    // Should have 18 tools
-    assert_eq!(tools.len(), 18);
+    // Should have 20 tools
+    assert_eq!(tools.len(), 20);
 
     // Verify all tool names are present
     let tool_names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
@@ -156,6 +156,8 @@ fn test_mcp_tools_list() {
     assert!(tool_names.contains(&"show_ticket"));
     assert!(tool_names.contains(&"add_dependency"));
     assert!(tool_names.contains(&"remove_dependency"));
+    assert!(tool_names.contains(&"add_label"));
+    assert!(tool_names.contains(&"remove_label"));
     assert!(tool_names.contains(&"add_ticket_to_plan"));
     assert!(tool_names.contains(&"get_plan_status"));
     assert!(tool_names.contains(&"show_plan_details"));
@@ -404,12 +406,10 @@ fn test_mcp_read_ticket_not_found() {
 
     // Should return an error
     assert!(response["error"].is_object());
-    assert!(
-        response["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("not found")
-    );
+    assert!(response["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("not found"));
 }
 
 #[test]
@@ -753,12 +753,10 @@ fn test_mcp_read_plan_not_found() {
 
     // Should return an error
     assert!(response["error"].is_object());
-    assert!(
-        response["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("not found")
-    );
+    assert!(response["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("not found"));
 }
 
 #[test]

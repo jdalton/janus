@@ -40,6 +40,8 @@ struct TicketFrontmatter {
     depth: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     triaged: Option<bool>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    labels: Vec<String>,
 }
 
 /// Parse a ticket file's content into TicketMetadata.
@@ -79,6 +81,7 @@ fn ticket_metadata_from_document(frontmatter_raw: &str, body: &str) -> Result<Ti
         spawn_context: frontmatter.spawn_context,
         depth: frontmatter.depth,
         triaged: frontmatter.triaged,
+        labels: frontmatter.labels,
         title: extract_title(body),
         completion_summary: extract_section(body, "completion summary")?,
         file_path: None,

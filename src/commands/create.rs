@@ -21,6 +21,7 @@ pub struct CreateOptions {
     pub spawned_from: Option<String>,
     pub spawn_context: Option<String>,
     pub size: Option<TicketSize>,
+    pub labels: Option<Vec<String>>,
     pub output: OutputOptions,
 }
 
@@ -62,11 +63,19 @@ pub async fn cmd_create(opts: CreateOptions) -> Result<()> {
         spawned_from,
         spawn_context,
         size,
+        labels,
         output,
     } = opts;
 
     // Validate title using shared validation rules
     validate_ticket_title(&title)?;
+
+    // Validate labels if provided
+    if let Some(ref labels) = labels {
+        for label in labels {
+            crate::types::validate_label(label)?;
+        }
+    }
 
     // Resolve spawned_from to canonical ticket ID if provided
     let resolved_spawned_from = if let Some(ref partial_id) = spawned_from {
@@ -91,6 +100,7 @@ pub async fn cmd_create(opts: CreateOptions) -> Result<()> {
         .spawn_context(spawn_context.as_deref())
         .depth(depth)
         .size(size)
+        .labels(labels.unwrap_or_default())
         .run_hooks(true)
         .build()?;
 

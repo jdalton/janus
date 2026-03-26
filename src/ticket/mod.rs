@@ -338,6 +338,7 @@ impl Ticket {
                 "triaged" => metadata.triaged.map(|t| t.to_string()),
                 "deps" => Some(format!("{:?}", metadata.deps)),
                 "links" => Some(format!("{:?}", metadata.links)),
+                "labels" => Some(format!("{:?}", metadata.labels)),
                 _ => None,
             }
         } else {
@@ -380,6 +381,9 @@ impl Ticket {
                 }
                 ArrayField::Links => {
                     crate::events::log_link_added(&self.id, ticket_id.as_ref(), actor)
+                }
+                ArrayField::Labels => {
+                    unreachable!("labels should use add_label() instead of add_to_array_field()")
                 }
             }
         }
@@ -425,10 +429,115 @@ impl Ticket {
                 ArrayField::Links => {
                     crate::events::log_link_removed(&self.id, ticket_id.as_ref(), actor)
                 }
+                ArrayField::Labels => {
+                    unreachable!(
+                        "labels should use remove_label() instead of remove_from_array_field()"
+                    )
+                }
             }
         }
 
         Ok(removed)
+    }
+
+    /// Add a label to this ticket.
+    /// Validates label format (lowercase + underscore only).
+    /// Returns true if the label was actually added (not already present).
+    pub fn add_label(&self, label: &str) -> Result<bool> {
+        self.add_label_with_actor(label, None)
+    }
+
+    /// Add a label to this ticket with optional actor.
+    pub fn add_label_with_actor(
+        &self,
+        label: &str,
+        actor: Option<crate::events::Actor>,
+    ) -> Result<bool> {
+        crate::types::validate_label(label)?;
+
+        let raw_content = self.read_content()?;
+        let metadata = parse(&raw_content)?;
+
+        if metadata.labels.contains(&label.to_string()) {
+            return Ok(false);
+        }
+
+        let mut new_labels = metadata.labels.clone();
+        new_labels.push(label.to_string());
+        new_labels.sort();
+        new_labels.dedup();
+
+        let json_value = serde_json::to_string(&new_labels)?;
+
+        let context = self
+            .hook_context()
+            .with_field_name("labels")
+            .with_new_value(&json_value);
+
+        crate::fs::with_write_hooks(
+            context,
+            || {
+                let new_content = update_field_in_content(&raw_content, "labels", &json_value)?;
+                self.write_raw(&new_content)
+            },
+            Some(HookEvent::TicketUpdated),
+        )?;
+
+        // Log the event
+        crate::events::log_label_added(&self.id, label, actor);
+
+        Ok(true)
+    }
+
+    /// Remove a label from this ticket.
+    /// Returns true if the label was actually removed.
+    pub fn remove_label(&self, label: &str) -> Result<bool> {
+        self.remove_label_with_actor(label, None)
+    }
+
+    /// Remove a label from this ticket with optional actor.
+    pub fn remove_label_with_actor(
+        &self,
+        label: &str,
+        actor: Option<crate::events::Actor>,
+    ) -> Result<bool> {
+        let raw_content = self.read_content()?;
+        let metadata = parse(&raw_content)?;
+
+        if !metadata.labels.contains(&label.to_string()) {
+            return Ok(false);
+        }
+
+        let new_labels: Vec<String> = metadata
+            .labels
+            .into_iter()
+            .filter(|l| l != label)
+            .collect();
+
+        let json_value = if new_labels.is_empty() {
+            "[]".to_string()
+        } else {
+            serde_json::to_string(&new_labels)?
+        };
+
+        let context = self
+            .hook_context()
+            .with_field_name("labels")
+            .with_new_value(&json_value);
+
+        crate::fs::with_write_hooks(
+            context,
+            || {
+                let new_content = update_field_in_content(&raw_content, "labels", &json_value)?;
+                self.write_raw(&new_content)
+            },
+            Some(HookEvent::TicketUpdated),
+        )?;
+
+        // Log the event
+        crate::events::log_label_removed(&self.id, label, actor);
+
+        Ok(true)
     }
 
     /// Extract an array field from raw content with fallback to tolerant parsing.
@@ -520,6 +629,9 @@ impl Ticket {
         match field {
             ArrayField::Deps => &metadata.deps,
             ArrayField::Links => &metadata.links,
+            ArrayField::Labels => {
+                unreachable!("labels are Vec<String>, not Vec<TicketId>; use add_label/remove_label instead")
+            }
         }
     }
 

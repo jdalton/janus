@@ -39,6 +39,12 @@ pub struct CreateTicketRequest {
         description = "Size estimate for the ticket. Valid values: xsmall/xs, small/s, medium/m, large/l, xlarge/xl"
     )]
     pub size: Option<String>,
+
+    /// Labels for categorization (lowercase + underscore only)
+    #[schemars(
+        description = "Optional labels for categorization (lowercase letters, digits, and underscores only)"
+    )]
+    pub labels: Option<Vec<String>>,
 }
 
 impl CreateTicketRequest {
@@ -75,6 +81,13 @@ impl CreateTicketRequest {
                     s,
                     crate::types::TicketSize::ALL_STRINGS.join(", ")
                 ));
+            }
+        }
+
+        // Validate labels if provided
+        if let Some(ref labels) = self.labels {
+            for label in labels {
+                crate::types::validate_label(label).map_err(|e| e.to_string())?;
             }
         }
 
@@ -214,6 +227,12 @@ pub struct ListTicketsRequest {
         description = "Filter by size. Comma-separated list of: xsmall/xs, small/s, medium/m, large/l, xlarge/xl"
     )]
     pub size: Option<String>,
+
+    /// Filter by labels (comma-separated). Returns tickets matching ANY specified label.
+    #[schemars(
+        description = "Filter by labels. Comma-separated list of labels. Returns tickets matching ANY specified label."
+    )]
+    pub labels: Option<String>,
 }
 
 impl ListTicketsRequest {
@@ -473,6 +492,36 @@ impl DocSearchRequest {
     }
 }
 
+/// Request parameters for adding a label to a ticket
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct AddLabelRequest {
+    /// Ticket ID (can be partial)
+    #[schemars(description = "ID of the ticket to add a label to")]
+    pub id: String,
+
+    /// Label to add (lowercase letters, digits, and underscores only)
+    #[schemars(description = "Label to add (lowercase letters, digits, and underscores only)")]
+    pub label: String,
+}
+
+impl AddLabelRequest {
+    pub(crate) fn validate(&self) -> Result<(), String> {
+        crate::types::validate_label(&self.label).map_err(|e| e.to_string())
+    }
+}
+
+/// Request parameters for removing a label from a ticket
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct RemoveLabelRequest {
+    /// Ticket ID (can be partial)
+    #[schemars(description = "ID of the ticket to remove a label from")]
+    pub id: String,
+
+    /// Label to remove
+    #[schemars(description = "Label to remove from the ticket")]
+    pub label: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -634,6 +683,7 @@ mod tests {
             priority: None,
             description: None,
             size: None,
+            labels: None,
         };
         assert!(request.validate().is_ok());
     }
@@ -646,6 +696,7 @@ mod tests {
             priority: None,
             description: None,
             size: None,
+            labels: None,
         };
         assert!(request.validate().is_err());
     }
@@ -658,6 +709,7 @@ mod tests {
             priority: None,
             description: Some("a".repeat(5001)),
             size: None,
+            labels: None,
         };
         assert!(request.validate().is_err());
     }

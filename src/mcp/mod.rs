@@ -240,8 +240,8 @@ mod tests {
     fn test_tools_router_has_tools() {
         let server = JanusTools::new();
         let tools = server.router().list_all();
-        // We should have 18 tools (including semantic_search, 4 doc tools, and show_plan_details)
-        assert_eq!(tools.len(), 18);
+        // We should have 20 tools (including semantic_search, 4 doc tools, show_plan_details, add_label, remove_label)
+        assert_eq!(tools.len(), 20);
 
         // Verify tool names
         let tool_names: Vec<&str> = tools.iter().map(|t| t.name.as_ref()).collect();
@@ -253,6 +253,8 @@ mod tests {
         assert!(tool_names.contains(&"show_ticket"));
         assert!(tool_names.contains(&"add_dependency"));
         assert!(tool_names.contains(&"remove_dependency"));
+        assert!(tool_names.contains(&"add_label"));
+        assert!(tool_names.contains(&"remove_label"));
         assert!(tool_names.contains(&"doc_list"));
         assert!(tool_names.contains(&"doc_show"));
         assert!(tool_names.contains(&"doc_set"));

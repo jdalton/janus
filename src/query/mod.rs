@@ -200,6 +200,28 @@ impl TicketFilter for TriagedFilter {
     }
 }
 
+/// Filter tickets by labels (OR matching - any label matches)
+pub struct LabelFilter {
+    labels: Vec<String>,
+}
+
+impl LabelFilter {
+    pub fn new(labels: Vec<String>) -> Self {
+        Self { labels }
+    }
+}
+
+impl TicketFilter for LabelFilter {
+    fn matches(&self, ticket: &TicketMetadata, _context: &TicketFilterContext) -> bool {
+        if self.labels.is_empty() {
+            return true;
+        }
+        self.labels
+            .iter()
+            .any(|filter_label| ticket.labels.contains(filter_label))
+    }
+}
+
 /// Filter tickets that are "ready" (New/Next status with all deps satisfied)
 pub struct ReadyFilter;
 

@@ -346,6 +346,36 @@ pub fn log_link_removed(ticket_id: &str, linked_id: &str, actor: Option<Actor>) 
     );
 }
 
+/// Log a label added event
+pub fn log_label_added(ticket_id: &str, label: &str, actor: Option<Actor>) {
+    log_event(
+        Event::new(
+            EventType::LabelAdded,
+            EntityType::Ticket,
+            ticket_id,
+            serde_json::json!({
+                "label": label,
+            }),
+        )
+        .with_actor(actor.unwrap_or_default()),
+    );
+}
+
+/// Log a label removed event
+pub fn log_label_removed(ticket_id: &str, label: &str, actor: Option<Actor>) {
+    log_event(
+        Event::new(
+            EventType::LabelRemoved,
+            EntityType::Ticket,
+            ticket_id,
+            serde_json::json!({
+                "label": label,
+            }),
+        )
+        .with_actor(actor.unwrap_or_default()),
+    );
+}
+
 /// Log a plan creation event
 pub fn log_plan_created(plan_id: &str, title: &str, is_phased: bool, phases: &[String]) {
     log_event(Event::new(
@@ -664,20 +694,16 @@ mod tests {
         assert_eq!(events[1].event_type, EventType::CacheRebuilt);
         assert_eq!(events[1].data["reason"], "corruption_recovery");
         assert_eq!(events[1].data["trigger"], "automatic_recovery");
-        assert!(
-            !events[1]
-                .data
-                .as_object()
-                .unwrap()
-                .contains_key("duration_ms")
-        );
-        assert!(
-            !events[1]
-                .data
-                .as_object()
-                .unwrap()
-                .contains_key("ticket_count")
-        );
+        assert!(!events[1]
+            .data
+            .as_object()
+            .unwrap()
+            .contains_key("duration_ms"));
+        assert!(!events[1]
+            .data
+            .as_object()
+            .unwrap()
+            .contains_key("ticket_count"));
         assert!(!events[1].data.as_object().unwrap().contains_key("details"));
     }
 

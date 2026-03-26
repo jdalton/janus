@@ -116,8 +116,13 @@ pub fn format_ticket_table_row(metadata: &TicketMetadata) -> String {
     let ticket_type = format_ticket_type(metadata);
     let priority = format_ticket_priority(metadata);
     let size = format_ticket_size(metadata);
+    let labels = if metadata.labels.is_empty() {
+        "-".to_string()
+    } else {
+        metadata.labels.join(", ")
+    };
 
-    format!("| {id} | {title} | {status} | {ticket_type} | {priority} | {size} |\n")
+    format!("| {id} | {title} | {status} | {ticket_type} | {priority} | {size} | {labels} |\n")
 }
 
 /// Format a ticket as a markdown table row with children-specific columns.
@@ -254,6 +259,10 @@ pub fn format_ticket_as_markdown(
     if let Some(ref remote) = metadata.remote {
         output.push_str(&format!("| Remote | {remote} |\n"));
     }
+    if !metadata.labels.is_empty() {
+        let labels_str = metadata.labels.join(", ");
+        output.push_str(&format!("| Labels | {labels_str} |\n"));
+    }
 
     // Description section (the ticket body content)
     output.push_str("\n## Description\n\n");
@@ -286,6 +295,7 @@ pub fn format_ticket_as_markdown(
 }
 
 /// Build a human-readable filter summary from filter parameters
+#[allow(clippy::too_many_arguments)]
 pub fn build_filter_summary(
     ready: Option<bool>,
     blocked: Option<bool>,
@@ -294,6 +304,7 @@ pub fn build_filter_summary(
     spawned_from: Option<&str>,
     depth: Option<u32>,
     size: Option<&str>,
+    labels: Option<&str>,
 ) -> String {
     let mut filters = Vec::new();
 
@@ -317,6 +328,9 @@ pub fn build_filter_summary(
     }
     if let Some(sz) = size {
         filters.push(format!("size={sz}"));
+    }
+    if let Some(l) = labels {
+        filters.push(format!("labels={l}"));
     }
 
     if filters.is_empty() {
@@ -345,8 +359,8 @@ pub fn format_ticket_list_as_markdown(tickets: &[&TicketMetadata], filter_summar
     }
 
     // Table header
-    output.push_str("| ID | Title | Status | Type | Priority | Size |\n");
-    output.push_str("|----|-------|--------|------|----------|------|\n");
+    output.push_str("| ID | Title | Status | Type | Priority | Size | Labels |\n");
+    output.push_str("|----|-------|--------|------|----------|------|--------|\n");
 
     // Table rows using centralized formatting
     for ticket in tickets {

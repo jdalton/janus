@@ -274,6 +274,11 @@ pub enum JanusError {
     #[error("invalid field name: '{0}'")]
     InvalidFieldName(String),
 
+    #[error(
+        "invalid label '{0}': labels must contain only lowercase letters, digits, and underscores"
+    )]
+    InvalidLabel(String),
+
     #[error("{}", format_invalid_field_value(.field, .value, .valid_values))]
     InvalidFieldValue {
         field: String,

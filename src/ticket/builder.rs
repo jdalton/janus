@@ -1,8 +1,8 @@
 use crate::error::{JanusError, Result};
 use crate::events::log_ticket_created;
-use crate::hooks::{HookContext, HookEvent, run_post_hooks, run_pre_hooks};
+use crate::hooks::{run_post_hooks, run_pre_hooks, HookContext, HookEvent};
 use crate::types::{
-    EntityType, TicketPriority, TicketSize, TicketStatus, TicketType, tickets_items_dir,
+    tickets_items_dir, EntityType, TicketPriority, TicketSize, TicketStatus, TicketType,
 };
 use crate::utils;
 use serde::Serialize;
@@ -35,6 +35,8 @@ struct TicketFrontmatter {
     triaged: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     size: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    labels: Vec<String>,
 }
 
 pub struct TicketBuilder {
@@ -57,6 +59,7 @@ pub struct TicketBuilder {
     depth: Option<u32>,
     triaged: Option<bool>,
     size: Option<TicketSize>,
+    labels: Vec<String>,
 }
 
 impl TicketBuilder {
@@ -81,6 +84,7 @@ impl TicketBuilder {
             depth: None,
             triaged: None,
             size: None,
+            labels: Vec::new(),
         }
     }
 
@@ -174,6 +178,11 @@ impl TicketBuilder {
         self
     }
 
+    pub fn labels(mut self, labels: Vec<String>) -> Self {
+        self.labels = labels;
+        self
+    }
+
     pub fn build(self) -> Result<(String, PathBuf)> {
         utils::ensure_dir()?;
 
@@ -208,6 +217,7 @@ impl TicketBuilder {
             depth: self.depth,
             triaged: self.triaged.unwrap_or(false),
             size: self.size.map(|s| s.to_string()),
+            labels: self.labels,
         };
 
         let yaml_content = serde_yaml_ng::to_string(&frontmatter_data).map_err(|e| {

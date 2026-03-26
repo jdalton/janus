@@ -18,6 +18,7 @@ const SUPPORTED_FIELDS: &[&str] = &[
     "design",
     "acceptance",
     "description",
+    "labels",
 ];
 
 macro_rules! define_validator {
@@ -210,6 +211,32 @@ pub async fn cmd_set(
                 ticket.update_description(Some(&new_value))?;
             } else {
                 ticket.update_description(None)?;
+                new_value = String::new();
+            }
+        }
+        "labels" => {
+            previous_value = if metadata.labels.is_empty() {
+                None
+            } else {
+                Some(metadata.labels.join(","))
+            };
+            if let Some(value) = value {
+                // Parse comma-separated labels and validate each one
+                let labels: Vec<String> = value
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                for label in &labels {
+                    crate::types::validate_label(label).map_err(|e| {
+                        JanusError::InvalidInput(format!("{e}"))
+                    })?;
+                }
+                let json_value = serde_json::to_string(&labels).unwrap();
+                new_value = labels.join(",");
+                ticket.update_field("labels", &json_value)?;
+            } else {
+                ticket.update_field("labels", "[]")?;
                 new_value = String::new();
             }
         }

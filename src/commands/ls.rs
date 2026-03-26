@@ -29,6 +29,7 @@ pub struct LsOptions {
     pub phase: Option<u32>,
     pub triaged: Option<bool>,
     pub size_filter: Option<Vec<TicketSize>>,
+    pub label_filter: Option<Vec<String>>,
     pub limit: Option<usize>,
     pub sort_by: SortField,
     pub output: OutputOptions,
@@ -50,6 +51,7 @@ impl LsOptions {
             phase: None,
             triaged: None,
             size_filter: None,
+            label_filter: None,
             limit: None,
             sort_by: SortField::default(),
             output: OutputOptions { json: false },
@@ -156,6 +158,11 @@ pub async fn cmd_ls_with_options(opts: LsOptions) -> Result<()> {
     // Add size filter if specified
     if let Some(ref sizes) = opts.size_filter {
         builder = builder.with_filter(Box::new(SizeFilter::new(sizes.clone())));
+    }
+
+    // Add label filter if specified
+    if let Some(ref labels) = opts.label_filter {
+        builder = builder.with_filter(Box::new(crate::query::LabelFilter::new(labels.clone())));
     }
 
     // Add status-based filters

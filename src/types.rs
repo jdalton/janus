@@ -657,6 +657,7 @@ pub enum TicketField {
     SpawnContext,
     Depth,
     Triaged,
+    Labels,
 }
 
 /// Enum for array field names to provide compile-time type safety.
@@ -664,6 +665,7 @@ pub enum TicketField {
 pub enum ArrayField {
     Deps,
     Links,
+    Labels,
 }
 
 impl ArrayField {
@@ -671,6 +673,7 @@ impl ArrayField {
         match self {
             ArrayField::Deps => "deps",
             ArrayField::Links => "links",
+            ArrayField::Labels => "labels",
         }
     }
 }
@@ -683,6 +686,8 @@ impl std::str::FromStr for ArrayField {
             Ok(ArrayField::Deps)
         } else if s.eq_ignore_ascii_case("links") {
             Ok(ArrayField::Links)
+        } else if s.eq_ignore_ascii_case("labels") {
+            Ok(ArrayField::Labels)
         } else {
             Err(JanusError::UnknownArrayField(s.to_string()))
         }
@@ -712,6 +717,7 @@ impl TicketField {
             TicketField::SpawnContext => "spawn-context",
             TicketField::Depth => "depth",
             TicketField::Triaged => "triaged",
+            TicketField::Labels => "labels",
         }
     }
 
@@ -734,6 +740,7 @@ impl TicketField {
             SpawnContext,
             Depth,
             Triaged,
+            Labels,
         ]
     }
 }
@@ -812,6 +819,10 @@ pub struct TicketMetadata {
     /// Whether the ticket has been triaged (reviewed and assessed)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub triaged: Option<bool>,
+
+    /// Labels for categorization (lowercase + underscore only)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub labels: Vec<String>,
 
     // --- Runtime-only fields ---
     #[serde(skip)]
@@ -1004,6 +1015,9 @@ pub struct TicketSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub triaged: Option<bool>,
 
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub labels: Vec<String>,
+
     #[serde(skip)]
     pub title: Option<String>,
 
@@ -1051,10 +1065,27 @@ impl From<&TicketMetadata> for TicketSummary {
             spawn_context: meta.spawn_context.clone(),
             depth: meta.depth,
             triaged: meta.triaged,
+            labels: meta.labels.clone(),
             title: meta.title.clone(),
             completion_summary: meta.completion_summary.clone(),
         }
     }
+}
+
+/// Validate that a label contains only lowercase letters, digits, and underscores.
+pub fn validate_label(label: &str) -> crate::error::Result<()> {
+    if label.is_empty() {
+        return Err(crate::error::JanusError::InvalidLabel(
+            "(empty)".to_string(),
+        ));
+    }
+    if !label
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+    {
+        return Err(crate::error::JanusError::InvalidLabel(label.to_string()));
+    }
+    Ok(())
 }
 
 /// Helper struct for tickets with computed blockers

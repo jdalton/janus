@@ -75,7 +75,12 @@ fn matches_search_query(
         .as_ref()
         .is_some_and(|s| contains_case_insensitive(&s.to_string(), text_query));
 
-    id_match || title_match || body_match || type_match || status_match
+    let label_match = ticket
+        .labels
+        .iter()
+        .any(|l| contains_case_insensitive(l, text_query));
+
+    id_match || title_match || body_match || type_match || status_match || label_match
 }
 
 impl TicketStore {
@@ -344,7 +349,7 @@ mod tests {
             id: Some(PlanId::new_unchecked("plan-c3d4")),
             title: Some("Feature Rollout".to_string()),
             sections: vec![PlanSection::Tickets(TicketsSection::new(vec![
-                "j-e5f6".to_string(),
+                "j-e5f6".to_string()
             ]))],
             ..Default::default()
         });

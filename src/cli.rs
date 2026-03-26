@@ -75,6 +75,10 @@ pub enum Commands {
         #[arg(long, value_parser = parse_size)]
         size: Option<TicketSize>,
 
+        /// Labels for categorization (comma-separated, lowercase + underscore only)
+        #[arg(long, value_delimiter = ',')]
+        labels: Option<Vec<String>>,
+
         #[command(flatten)]
         output: OutputOptions,
     },
@@ -257,6 +261,10 @@ pub enum Commands {
         /// Filter by size (can specify multiple: --size small,medium)
         #[arg(long, value_delimiter = ',', value_parser = parse_size)]
         size: Option<Vec<TicketSize>>,
+
+        /// Filter by labels (comma-separated, shows tickets matching ANY label)
+        #[arg(long, value_delimiter = ',')]
+        labels: Option<Vec<String>>,
 
         /// Maximum tickets to show (unlimited if not specified)
         #[arg(long)]
@@ -1003,6 +1011,7 @@ impl Commands {
                 spawned_from,
                 spawn_context,
                 size,
+                labels,
                 output,
             } => {
                 cmd_create(CreateOptions {
@@ -1018,6 +1027,7 @@ impl Commands {
                     spawned_from,
                     spawn_context,
                     size,
+                    labels,
                     output,
                 })
                 .await
@@ -1079,6 +1089,7 @@ impl Commands {
                 phase,
                 triaged,
                 size,
+                labels,
                 limit,
                 sort_by,
                 output,
@@ -1096,6 +1107,7 @@ impl Commands {
                     phase,
                     triaged,
                     size_filter: size,
+                    label_filter: labels,
                     limit,
                     sort_by,
                     output,
