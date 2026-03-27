@@ -14,6 +14,7 @@ pub mod handlers;
 pub mod highlight;
 pub mod hooks;
 pub mod navigation;
+pub mod plan_hud;
 pub mod remote;
 pub mod repository;
 pub mod screen_base;
@@ -27,6 +28,7 @@ pub mod view;
 
 pub use analytics::{StatusCounts, TicketAnalytics};
 pub use board::{KanbanBoard, KanbanBoardProps};
+pub use plan_hud::{PlanHud, PlanHudProps};
 pub use edit::{
     EditField, EditForm, EditFormOverlay, EditFormProps, EditResult, extract_body_for_edit,
 };

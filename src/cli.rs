@@ -901,6 +901,16 @@ pub enum PlanAction {
         #[command(flatten)]
         output: OutputOptions,
     },
+    /// Interactive plan progress dashboard (HUD)
+    Hud {
+        /// Plan ID (can be partial)
+        #[arg(value_parser = parse_plan_id)]
+        id: String,
+
+        /// Ring the terminal bell on ticket/plan completion
+        #[arg(long)]
+        bell: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -972,9 +982,10 @@ impl Commands {
             cmd_events_prune, cmd_graph, cmd_hook_disable, cmd_hook_enable, cmd_hook_install,
             cmd_hook_list, cmd_hook_log, cmd_hook_run, cmd_link_add, cmd_link_remove,
             cmd_ls_with_options, cmd_next, cmd_plan_add_phase, cmd_plan_add_ticket,
-            cmd_plan_create, cmd_plan_delete, cmd_plan_edit, cmd_plan_import, cmd_plan_ls,
-            cmd_plan_move_ticket, cmd_plan_next, cmd_plan_remove_phase, cmd_plan_remove_ticket,
-            cmd_plan_rename, cmd_plan_reorder, cmd_plan_show, cmd_plan_status, cmd_plan_verify,
+            cmd_plan_create, cmd_plan_delete, cmd_plan_edit, cmd_plan_hud, cmd_plan_import,
+            cmd_plan_ls, cmd_plan_move_ticket, cmd_plan_next, cmd_plan_remove_phase,
+            cmd_plan_remove_ticket, cmd_plan_rename, cmd_plan_reorder, cmd_plan_show,
+            cmd_plan_status, cmd_plan_verify,
             cmd_push, cmd_query, cmd_remote_browse, cmd_remote_link, cmd_reopen, cmd_search,
             cmd_set, cmd_show, cmd_show_import_spec, cmd_start, cmd_status, cmd_sync, cmd_view,
         };
@@ -1294,6 +1305,7 @@ impl Commands {
                     cmd_plan_verify(output),
                     "Plan verification failed - some files have errors",
                 ),
+                PlanAction::Hud { id, bell } => cmd_plan_hud(&id, bell).await,
             },
 
             Commands::Graph {
