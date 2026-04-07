@@ -498,6 +498,9 @@ pub enum JanusError {
     #[error("could not find ticket or plan with ID '{0}'")]
     ItemNotFound(String),
 
+    #[error("file not found: {0}")]
+    FileNotFound(String),
+
     // CLI/Editor errors
     #[error("editor exited with code {0}")]
     EditorFailed(i32),

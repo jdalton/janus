@@ -55,6 +55,10 @@ cynic = "3"
 # Using fork with cursor navigation fixes including UTF-8 character handling
 iocraft = { git = "https://github.com/divmain/iocraft", rev = "1f8a363" }
 
+# Terminal manipulation (used by ExternalEditor for TUI suspend/resume)
+# Already a transitive dependency via iocraft
+crossterm = "0.28"
+
 # Fuzzy search for filtering
 fuzzy-matcher = "0.3"
 

@@ -5,9 +5,11 @@
 //! than directly manipulating business entities.
 
 mod edit;
+mod external_editor;
 mod validator;
 
 pub use edit::TicketEditService;
+pub use external_editor::ExternalEditor;
 pub use validator::{TicketFormValidator, ValidationResult};
 
 use crate::error::Result;

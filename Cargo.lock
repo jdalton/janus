@@ -2449,6 +2449,7 @@ dependencies = [
  "clap_complete",
  "clipboard-rs",
  "comrak",
+ "crossterm",
  "cynic",
  "cynic-codegen",
  "dashmap 6.1.0",
