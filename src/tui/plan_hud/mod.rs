@@ -7,6 +7,7 @@ pub mod components;
 pub mod model;
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::time::Instant;
 
 use iocraft::prelude::*;
@@ -16,6 +17,7 @@ use crate::tui::components::{
 };
 use crate::tui::hooks::use_store_watcher;
 use crate::tui::screen_base::{ScreenLayout, should_process_key_event};
+use crate::tui::services::ExternalEditor;
 use crate::tui::theme::theme;
 use crate::types::TicketStatus;
 
@@ -50,7 +52,7 @@ pub fn PlanHud<'a>(props: &PlanHudProps, mut hooks: Hooks) -> impl Into<AnyEleme
     let mut is_loading = hooks.use_state(|| true);
     let hud_state: State<Option<HudState>> = hooks.use_state(|| None);
     let prev_state: State<Option<HudState>> = hooks.use_state(|| None);
-    let toast: State<Option<Toast>> = hooks.use_state(|| None);
+    let mut toast: State<Option<Toast>> = hooks.use_state(|| None);
 
     // View mode
     let mut is_compact = hooks.use_state(|| false);
@@ -66,6 +68,9 @@ pub fn PlanHud<'a>(props: &PlanHudProps, mut hooks: Hooks) -> impl Into<AnyEleme
     // Scroll state
     let mut scroll_offset = hooks.use_state(|| 0usize);
     let mut selected_index: State<Option<usize>> = hooks.use_state(|| None);
+
+    // External editor deferred execution
+    let mut pending_external_edit: State<Option<PathBuf>> = hooks.use_state(|| None);
 
     // Flash animations
     let flashes: State<HashMap<String, FlashEntry>> = hooks.use_state(HashMap::new);
@@ -188,6 +193,20 @@ pub fn PlanHud<'a>(props: &PlanHudProps, mut hooks: Hooks) -> impl Into<AnyEleme
         needs_reload.set(false);
         is_loading.set(true);
         load_handler.clone()(());
+    }
+
+    // Deferred external editor execution
+    let pending_edit_path = pending_external_edit.read().clone();
+    if let Some(path) = pending_edit_path {
+        pending_external_edit.set(None);
+        match ExternalEditor::open_ticket_file(&path) {
+            Ok(()) => {
+                needs_reload.set(true);
+            }
+            Err(e) => {
+                toast.set(Some(Toast::error(format!("{e}"))));
+            }
+        }
     }
 
     // Clipboard handler
@@ -444,6 +463,20 @@ pub fn PlanHud<'a>(props: &PlanHudProps, mut hooks: Hooks) -> impl Into<AnyEleme
                             }
                         }
 
+                        // Open ticket file in $EDITOR
+                        KeyCode::Char('E') => {
+                            if let Some(ref state) = *hud_state.read()
+                                && let Some(id) = resolve_selected_ticket_id(state)
+                                && let Some(ticket) = state.tickets.iter().find(|t| t.id == id)
+                                && let Some(ref metadata) = ticket.metadata
+                                && let Some(ref file_path) = metadata.file_path
+                            {
+                                // Close detail modal if open (narrow mode)
+                                show_detail.set(None);
+                                pending_external_edit.set(Some(file_path.clone()));
+                            }
+                        }
+
                         // Reset detail panel to follow active ticket (wide mode)
                         KeyCode::Esc => {
                             if is_wide {
@@ -478,6 +511,7 @@ pub fn PlanHud<'a>(props: &PlanHudProps, mut hooks: Hooks) -> impl Into<AnyEleme
             .add("j/k", "Navigate")
             .add("Enter", "Show Ticket")
             .add("Esc", "Follow Active")
+            .add("E", "$EDITOR")
             .add("c", "Copy ID")
             .add("Tab", "Compact");
         builder = builder.add("q", "Quit");
@@ -486,6 +520,7 @@ pub fn PlanHud<'a>(props: &PlanHudProps, mut hooks: Hooks) -> impl Into<AnyEleme
         ShortcutsBuilder::new()
             .add("j/k", "Navigate")
             .add("Enter", "Detail")
+            .add("E", "$EDITOR")
             .add("c", "Copy ID")
             .add("Tab", "Compact")
             .add("a", "Activity")
