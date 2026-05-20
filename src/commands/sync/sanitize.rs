@@ -13,7 +13,7 @@ use crate::error::{JanusError, Result};
 use crate::utils::validation::MAX_REMOTE_TITLE_LENGTH;
 
 /// Maximum size for a ticket body (in bytes).
-const MAX_BODY_SIZE: usize = 100 * 1024; // 100 KB
+const MAX_BODY_SIZE: usize = 400 * 1024; // 400 KB
 
 /// Sanitize a remote issue title for use as a local ticket title.
 ///

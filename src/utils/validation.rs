@@ -16,7 +16,7 @@ pub const MAX_TICKET_TITLE_LENGTH: usize = 200;
 pub const MAX_PLAN_TITLE_LENGTH: usize = 200;
 
 /// Maximum length for descriptions, notes, and summaries (in characters).
-pub const MAX_DESCRIPTION_LENGTH: usize = 5000;
+pub const MAX_DESCRIPTION_LENGTH: usize = 40000;
 
 // ============================================================================
 // Title Validation
@@ -194,10 +194,24 @@ pub fn validate_description(text: &str, field_name: &str) -> std::result::Result
 /// * `Ok(())` if valid
 /// * `Err(String)` with descriptive message if invalid
 pub fn validate_note(note: &str) -> std::result::Result<(), String> {
-    if note.is_empty() {
+    if note.trim().is_empty() {
         return Err("Note cannot be empty".to_string());
     }
-    validate_description(note, "Note")
+    if note.len() > MAX_NOTE_LENGTH {
+        return Err(format!(
+            "Note is too long ({} chars, max {})",
+            note.len(),
+            MAX_NOTE_LENGTH
+        ));
+    }
+    // Allow newlines but reject other control characters
+    if note
+        .chars()
+        .any(|c| c.is_control() && c != '\n' && c != '\r')
+    {
+        return Err("Note contains invalid control characters".to_string());
+    }
+    Ok(())
 }
 
 /// Validates an optional summary.
@@ -227,6 +241,9 @@ pub fn validate_optional_summary(summary: Option<&str>) -> std::result::Result<(
     }
     Ok(())
 }
+
+/// Maximum length for notes (in characters).
+pub const MAX_NOTE_LENGTH: usize = 20000;
 
 /// Maximum length for remote titles after sanitization.
 pub const MAX_REMOTE_TITLE_LENGTH: usize = 200;

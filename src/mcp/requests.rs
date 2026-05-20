@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::validation::{
     validate_description, validate_note, validate_optional_summary, validate_title_for_mcp,
+    MAX_DESCRIPTION_LENGTH,
 };
 
 // ============================================================================
@@ -31,7 +32,7 @@ pub struct CreateTicketRequest {
     pub priority: Option<u8>,
 
     /// Description/body content for the ticket
-    #[schemars(description = "Optional description text for the ticket body (max 5000 chars)")]
+    #[schemars(description = "Optional description text for the ticket body (max 40000 chars)")]
     pub description: Option<String>,
 
     /// Size estimate: xsmall, small, medium, large, xlarge (or aliases: xs, s, m, l, xl)
@@ -110,12 +111,12 @@ pub struct SpawnSubtaskRequest {
     pub title: String,
 
     /// Description/body content for the subtask
-    #[schemars(description = "Optional description text for the subtask (max 5000 chars)")]
+    #[schemars(description = "Optional description text for the subtask (max 40000 chars)")]
     pub description: Option<String>,
 
     /// Context explaining why this subtask was created
     #[schemars(
-        description = "Context explaining why this subtask was spawned from the parent (max 5000 chars)"
+        description = "Context explaining why this subtask was spawned from the parent (max 40000 chars)"
     )]
     pub spawn_context: Option<String>,
 }
@@ -150,7 +151,7 @@ pub struct UpdateStatusRequest {
 
     /// Optional summary when closing (completing/cancelling) a ticket
     #[schemars(
-        description = "Optional completion summary (max 5000 chars, recommended when closing tickets)"
+        description = "Optional completion summary (max 40000 chars, recommended when closing tickets)"
     )]
     pub summary: Option<String>,
 }
@@ -181,7 +182,7 @@ pub struct AddNoteRequest {
 
     /// Note content to add
     #[schemars(
-        description = "The note text to add (will be timestamped, max 5000 chars, non-empty)"
+        description = "The note text to add (will be timestamped, max 20000 chars, non-empty)"
     )]
     pub note: String,
 }
@@ -659,7 +660,7 @@ pub struct AddObjectiveNoteRequest {
 
     /// Note content to add
     #[schemars(
-        description = "The note text to add (will be timestamped, max 5000 chars, non-empty)"
+        description = "The note text to add (will be timestamped, max 20000 chars, non-empty)"
     )]
     pub note: String,
 }
@@ -682,7 +683,7 @@ pub struct AddObjectiveCriterionRequest {
 
     /// Criterion text to add (will be sanitized: newlines collapsed, headings stripped, etc.)
     #[schemars(
-        description = "The acceptance criterion text to add. Will be sanitized for safe markdown bullet insertion (newlines collapsed, headings stripped, max 5000 chars, non-empty)."
+        description = "The acceptance criterion text to add. Will be sanitized for safe markdown bullet insertion (newlines collapsed, headings stripped, max 40000 chars, non-empty)."
     )]
     pub criterion: String,
 }
@@ -695,10 +696,11 @@ impl AddObjectiveCriterionRequest {
         if self.criterion.trim().is_empty() {
             return Err("Criterion text cannot be empty".to_string());
         }
-        if self.criterion.len() > 5000 {
+        if self.criterion.len() > MAX_DESCRIPTION_LENGTH {
             return Err(format!(
-                "Criterion text is too long ({} chars, max 5000)",
-                self.criterion.len()
+                "Criterion text is too long ({} chars, max {})",
+                self.criterion.len(),
+                MAX_DESCRIPTION_LENGTH
             ));
         }
         Ok(())
@@ -920,7 +922,7 @@ mod tests {
             title: "Valid Title".to_string(),
             ticket_type: None,
             priority: None,
-            description: Some("a".repeat(5001)),
+            description: Some("a".repeat(40001)),
             size: None,
             labels: None,
         };

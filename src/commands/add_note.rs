@@ -4,6 +4,7 @@ use super::CommandOutput;
 use crate::cli::OutputOptions;
 use crate::error::{JanusError, Result};
 use crate::ticket::Ticket;
+use crate::utils::validation::MAX_NOTE_LENGTH;
 use crate::utils::{is_stdin_tty, iso_date, read_stdin};
 
 /// Add a timestamped note to a ticket
@@ -25,7 +26,6 @@ pub async fn cmd_add_note(id: &str, note_text: Option<&str>, output: OutputOptio
     }
 
     // Validate that note does not exceed maximum length
-    const MAX_NOTE_LENGTH: usize = 10000;
     if note.len() > MAX_NOTE_LENGTH {
         return Err(JanusError::NoteTooLong {
             max: MAX_NOTE_LENGTH,

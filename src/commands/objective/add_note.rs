@@ -8,6 +8,7 @@ use crate::error::{JanusError, Result};
 use crate::objective::Objective;
 use crate::store::get_or_init_store;
 use crate::utils::iso_date;
+use crate::utils::validation::MAX_NOTE_LENGTH;
 
 /// Add a timestamped note to an objective
 ///
@@ -21,7 +22,6 @@ pub async fn cmd_objective_add_note(id: &str, text: &str, output: OutputOptions)
         return Err(JanusError::EmptyNote);
     }
 
-    const MAX_NOTE_LENGTH: usize = 10000;
     if text.len() > MAX_NOTE_LENGTH {
         return Err(JanusError::NoteTooLong {
             max: MAX_NOTE_LENGTH,
