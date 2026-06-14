@@ -12,8 +12,9 @@ pub use manipulator::{extract_body, remove_field, update_field, update_title};
 pub use parser::parse as parse_ticket;
 
 pub use repository::{
-    TicketLoadResult, build_ticket_map, find_tickets, get_all_children_counts, get_all_tickets,
-    get_all_tickets_from_disk, get_all_tickets_with_map, get_children_count,
+    TicketLoadResult, build_ticket_map, build_ticket_map_in, find_tickets,
+    get_all_children_counts, get_all_tickets, get_all_tickets_from_disk, get_all_tickets_in,
+    get_all_tickets_with_map, get_all_tickets_with_map_in, get_children_count,
 };
 
 pub use self::validate::enforce_filename_authority;
